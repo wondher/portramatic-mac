@@ -8,6 +8,7 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -89,7 +90,7 @@ namespace Portramatic.ViewModels
                 });
 
             _galleryItems.Connect()
-                .ObserveOn(RxApp.MainThreadScheduler)
+                .ObserveOn(RxSchedulers.MainThreadScheduler)
                 .Filter(e => e.Definition.Requeried && e.Definition.Tags.Length > 0)
                 .Filter(e => !e.Definition.IsNSFW)
                 .Filter(filterFunction)
@@ -116,7 +117,7 @@ namespace Portramatic.ViewModels
                             return await File.ReadAllBytesAsync(HttpUtility.UrlDecode(url.AbsolutePath));
                         return await _client.GetByteArrayAsync(url);
                     })
-                    .ObserveOn(RxApp.MainThreadScheduler)
+                    .ObserveOn(RxSchedulers.MainThreadScheduler)
                     .Select(v =>
                     {
                         /*
@@ -147,18 +148,42 @@ namespace Portramatic.ViewModels
 
         private async Task InstallFiles()
         {
-            var wotrFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                @"..\LocalLow\Owlcat Games\Pathfinder Wrath Of The Righteous");
-            if (Directory.Exists(wotrFolder))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                await DoExport(Path.Combine(wotrFolder, "Portraits"));
+                var homeDir = Environment.GetEnvironmentVariable("HOME")
+                              ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                var appSupport = Path.Combine(homeDir, "Library", "Application Support");
+
+                var wotrFolder = Path.Combine(appSupport,
+                    "Owlcat Games", "Pathfinder Wrath Of The Righteous");
+                if (Directory.Exists(wotrFolder))
+                {
+                    await DoExport(Path.Combine(wotrFolder, "Portraits"));
+                }
+
+                var kingmakerFolder = Path.Combine(appSupport,
+                    "Owlcat Games", "Pathfinder Kingmaker");
+                if (Directory.Exists(kingmakerFolder))
+                {
+                    await DoExport(Path.Combine(kingmakerFolder, "Portraits"));
+                }
             }
-            
-            var kingmakerFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                @"..\LocalLow\Owlcat Games\Pathfinder Kingmaker");
-            if (Directory.Exists(kingmakerFolder))
+            else
             {
-                await DoExport(Path.Combine(kingmakerFolder, "Portraits"));
+                // Windows (and Linux fallback)
+                var wotrFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    @"..\LocalLow\Owlcat Games\Pathfinder Wrath Of The Righteous");
+                if (Directory.Exists(wotrFolder))
+                {
+                    await DoExport(Path.Combine(wotrFolder, "Portraits"));
+                }
+
+                var kingmakerFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    @"..\LocalLow\Owlcat Games\Pathfinder Kingmaker");
+                if (Directory.Exists(kingmakerFolder))
+                {
+                    await DoExport(Path.Combine(kingmakerFolder, "Portraits"));
+                }
             }
         }
 

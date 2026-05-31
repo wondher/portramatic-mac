@@ -5,27 +5,26 @@ on:
       version:
         description: 'Release Version'
         required: true
-        
+
 env:
   UNEX_APIKEY: ${{ secrets.NEXUS_API_KEY }}
-        
+
 jobs:
   build-windows:
     name: Build Windows
     runs-on: windows-latest
-    
+
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
-        
-      - name: Setup .NET Core SDK 6.0.x
-        uses: actions/setup-dotnet@v1
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Setup .NET SDK 10.0.x
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
-          include-prerelease: true
-            
+          dotnet-version: '10.0.x'
+
       - name: Install dependencies
         run: dotnet restore
       - name: Generate Thumbnails
@@ -37,16 +36,12 @@ jobs:
       - name: Publish
         run: dotnet publish Portramatic -r win-x64 -c Release -p:PublishReadyToRun=true --self-contained -o ./ -p:PublishSingleFile=true -p:DebugType=embedded -p:IncludeAllContentForSelfExtract=true
       - name: Windows signtool.exe code sign action
-        # You may pin to the exact commit or the version.
-        # uses: skymatic/code-sign-action@cfcc1c15b32938bab6dea25192045b6d2989e4d0
         uses: skymatic/code-sign-action@v1.1.0
         with:
           certificate: "${{ secrets.CODE_CERT }}"
           certificatesha1: "${{ secrets.CODE_CERT_SHA }}"
           password: "${{ secrets.CODE_CERT_PW }}"
-          # The folder that contains the files to sign.
           folder: ./
-          # Recursively search for supported files.
           recursive: false
       - name: Export Cookies
         run: echo "$NEXUS_COOKIE" > ./cookies.txt
@@ -57,24 +52,23 @@ jobs:
         run: nexus-mods-uploader upload 169 ./Portramatic.exe -v ${{ steps.date.outputs.date }}
         env:
           UNEX_COOKIES: ./cookies.txt
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Portramatic-win-${{ steps.date.outputs.date }}
-          path: Portramatic.exe          
+          path: Portramatic.exe
 
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v2
-        
-      - name: Setup .NET Core SDK 6.0.x
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 10.0.x
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
-          include-prerelease: true
-            
+          dotnet-version: '10.0.x'
+
       - name: Install dependencies
         run: dotnet restore
       - name: Generate Thumbnails
@@ -83,24 +77,50 @@ jobs:
         run: dotnet build
       - name: Publish
         run: dotnet publish Portramatic -r linux-x64 -c Release -p:PublishReadyToRun=true --self-contained -o ./publish -p:PublishSingleFile=true -p:DebugType=embedded -p:IncludeAllContentForSelfExtract=true
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Portramatic-linux-${{ github.event.inputs.version }}
-          path: ./publish/Portramatic        
- 
-  build-osx:
-    name: Build MacOS
-    runs-on: ubuntu-latest
-    
+          path: ./publish/Portramatic
+
+  build-osx-arm64:
+    name: Build macOS (Apple Silicon)
+    runs-on: macos-latest
+
     steps:
-      - uses: actions/checkout@v2
-        
-      - name: Setup .NET Core SDK 6.0.x
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 10.0.x
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
-          include-prerelease: true
-            
+          dotnet-version: '10.0.x'
+
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Generate Thumbnails
+        run: dotnet run --project ThumbnailGenerator -- ./ ./Portramatic/Resources MacOS
+      - name: Build App
+        run: dotnet build
+      - name: Publish
+        run: dotnet publish Portramatic -r osx-arm64 -c Release -p:PublishReadyToRun=true --self-contained -o ./publish -p:PublishSingleFile=true -p:DebugType=embedded -p:IncludeAllContentForSelfExtract=true
+      - name: Create .app Bundle
+        run: chmod +x ./build-macos-app.sh && ./build-macos-app.sh ./publish arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Portramatic-osx-arm64-${{ github.event.inputs.version }}
+          path: ./dist/Portramatic.app
+
+  build-osx-x64:
+    name: Build macOS (Intel)
+    runs-on: macos-13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET SDK 10.0.x
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
       - name: Install dependencies
         run: dotnet restore
       - name: Generate Thumbnails
@@ -109,8 +129,9 @@ jobs:
         run: dotnet build
       - name: Publish
         run: dotnet publish Portramatic -r osx-x64 -c Release -p:PublishReadyToRun=true --self-contained -o ./publish -p:PublishSingleFile=true -p:DebugType=embedded -p:IncludeAllContentForSelfExtract=true
-      - uses: actions/upload-artifact@v2
+      - name: Create .app Bundle
+        run: chmod +x ./build-macos-app.sh && ./build-macos-app.sh ./publish x64
+      - uses: actions/upload-artifact@v4
         with:
-          name: Portramatic-osx-${{ github.event.inputs.version }}
-          path: ./publish/Portramatic        
- 
+          name: Portramatic-osx-x64-${{ github.event.inputs.version }}
+          path: ./dist/Portramatic.app

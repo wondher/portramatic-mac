@@ -1,13 +1,14 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Portramatic"
-             x:Class="Portramatic.App">
+             x:Class="Portramatic.App"
+             RequestedThemeVariant="Dark">
     <Application.DataTemplates>
         <local:ViewLocator/>
     </Application.DataTemplates>
 
     <Application.Styles>
-        <StyleInclude Source="avares://Material.Icons.Avalonia/App.xaml"></StyleInclude>
-        <FluentTheme Mode="Dark"/>
+        <StyleInclude Source="avares://Material.Icons.Avalonia/MaterialIconStyles.axaml" />
+        <FluentTheme />
     </Application.Styles>
 </Application>

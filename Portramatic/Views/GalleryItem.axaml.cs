@@ -4,9 +4,10 @@ using System.Reactive.Disposables;
 using System.Reflection;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
-using Avalonia.ReactiveUI;
+using Portramatic.Extensions;
 using Portramatic.ViewModels;
 using ReactiveUI;
+using ReactiveUI.Avalonia;
 using ReactiveUI.Validation.Helpers;
 
 namespace Portramatic.Views

@@ -7,8 +7,9 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
-using Avalonia.ReactiveUI;
+using Portramatic.Extensions;
 using ReactiveUI;
+using ReactiveUI.Avalonia;
 using ReactiveUI.Fody.Helpers;
 
 namespace Portramatic.Controls
